@@ -1,8 +1,11 @@
 FROM node:20-alpine
 
+# Install OpenSSL — required by Prisma on Alpine Linux
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
-# Copy package files first (for faster rebuilds)
+# Copy package files first (faster rebuilds)
 COPY package*.json ./
 RUN npm install
 
@@ -16,7 +19,6 @@ COPY . .
 # Build the app
 RUN npm run build
 
-# Expose the port
 EXPOSE 3000
 
 # Run DB migrations then start the server
