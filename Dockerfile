@@ -1,4 +1,5 @@
 # LeadHub AI Backend v2
+# rebuild: 1
 FROM node:20-slim
 
 WORKDIR /app
@@ -11,8 +12,10 @@ RUN npm ci --include=dev
 COPY . .
 
 RUN npx prisma generate
-RUN npm run build
-RUN ls -la dist/
+
+RUN npm run build || (echo "BUILD FAILED" && exit 1)
+
+RUN ls -la dist/ && test -f dist/main.js || (echo "dist/main.js MISSING" && exit 1)
 
 EXPOSE 3000
 
