@@ -8,18 +8,25 @@ WORKDIR /app
 
 COPY package*.json ./
 
-# Install everything including devDependencies (needed to compile TypeScript)
 RUN npm ci
 
 COPY . .
 
 RUN npx prisma generate
 
-# Build with visible output so errors are not hidden
-RUN npm run build && echo "✅ Build succeeded" && ls -la dist/
+# Run TypeScript compiler directly to see ALL errors clearly
+RUN echo "=== Running TypeScript compiler ===" && \
+    ./node_modules/.bin/tsc --noEmit 2>&1 || true
 
-# Fail loudly with a clear message if build output is missing
-RUN test -f dist/main.js || (echo "❌ dist/main.js missing - TypeScript compile failed above" && exit 1)
+# Now run the actual build
+RUN echo "=== Running nest build ===" && \
+    ./node_modules/.bin/nest build 2>&1
+
+# Show everything in dist
+RUN echo "=== dist/ contents ===" && \
+    ls -la dist/ 2>&1 || echo "dist/ folder does not exist at all"
+
+RUN test -f dist/main.js || (echo "❌ dist/main.js missing - see TypeScript errors above" && exit 1)
 
 EXPOSE 3000
 
