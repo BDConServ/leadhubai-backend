@@ -7,26 +7,22 @@ RUN apt-get update -y && \
 WORKDIR /app
 
 COPY package*.json ./
+COPY tsconfig.json ./
+COPY nest-cli.json ./
+COPY prisma ./prisma/
 
 RUN npm ci
 
-COPY . .
+COPY src ./src/
 
 RUN npx prisma generate
 
-# Run TypeScript compiler directly to see ALL errors clearly
-RUN echo "=== Running TypeScript compiler ===" && \
-    ./node_modules/.bin/tsc --noEmit 2>&1 || true
+RUN echo "=== Building ===" && \
+    npm run build && \
+    echo "=== Build complete ===" && \
+    ls -la dist/
 
-# Now run the actual build
-RUN echo "=== Running nest build ===" && \
-    ./node_modules/.bin/nest build 2>&1
-
-# Show everything in dist
-RUN echo "=== dist/ contents ===" && \
-    ls -la dist/ 2>&1 || echo "dist/ folder does not exist at all"
-
-RUN test -f dist/main.js || (echo "❌ dist/main.js missing - see TypeScript errors above" && exit 1)
+RUN test -f dist/main.js || (echo "❌ dist/main.js missing" && exit 1)
 
 EXPOSE 3000
 
