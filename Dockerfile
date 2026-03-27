@@ -1,29 +1,23 @@
-FROM node:20-slim
-
-RUN apt-get update -y && \
-    apt-get install -y openssl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+FROM node:20-alpine
 
 WORKDIR /app
 
+# Copy package files first (for faster rebuilds)
 COPY package*.json ./
-COPY tsconfig.json ./
-COPY nest-cli.json ./
+RUN npm install
+
+# Copy Prisma schema and generate the client
 COPY prisma ./prisma/
-
-RUN npm ci
-
-COPY src ./src/
-
 RUN npx prisma generate
 
-RUN echo "=== Building ===" && \
-    npm run build && \
-    echo "=== Build complete ===" && \
-    ls -la dist/
+# Copy all source code
+COPY . .
 
-RUN test -f dist/main.js || (echo "❌ dist/main.js missing" && exit 1)
+# Build the app
+RUN npm run build
 
+# Expose the port
 EXPOSE 3000
 
+# Run DB migrations then start the server
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
