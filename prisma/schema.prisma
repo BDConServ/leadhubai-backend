@@ -1,74 +1,52 @@
-// This is your Prisma schema file.
-// Learn more: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// ─── CUSTOMER (the SMB business signing up) ───────────────────────────────────
 model Customer {
-  id            String   @id @default(cuid())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Business info
-  businessName  String
-  ownerName     String
-  email         String   @unique
-  phone         String?
-  website       String?
-  industry      String?
-
-  // Account status
-  status        OnboardingStatus @default(PENDING)
-  plan          Plan             @default(STARTER)
-
-  // Optional: which step of onboarding they completed last
-  onboardingStep Int @default(1)
-
-  // Relationship to their settings
-  settings      CustomerSettings?
+  id             String           @id @default(cuid())
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  businessName   String
+  ownerName      String
+  email          String           @unique
+  phone          String?
+  website        String?
+  industry       String?
+  status         OnboardingStatus @default(PENDING)
+  plan           Plan             @default(STARTER)
+  onboardingStep Int              @default(1)
+  settings       CustomerSettings?
 
   @@map("customers")
 }
 
-// ─── CUSTOMER SETTINGS (set during onboarding) ────────────────────────────────
 model CustomerSettings {
-  id              String   @id @default(cuid())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  customerId      String   @unique
-  customer        Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-
-  // AI Response settings
-  aiResponseEnabled   Boolean @default(true)
-  responseDelaySeconds Int    @default(30)
-
-  // Notification preferences
-  notifyEmail     Boolean @default(true)
-  notifyPhone     Boolean @default(false)
-
-  // Business hours (stored as JSON string, e.g. "Mon-Fri 9am-5pm")
-  businessHours   String?
-
-  // Custom AI greeting message
-  aiGreeting      String?
+  id                   String   @id @default(cuid())
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  customerId           String   @unique
+  customer             Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  aiResponseEnabled    Boolean  @default(true)
+  responseDelaySeconds Int      @default(30)
+  notifyEmail          Boolean  @default(true)
+  notifyPhone          Boolean  @default(false)
+  businessHours        String?
+  aiGreeting           String?
 
   @@map("customer_settings")
 }
 
-// ─── ENUMS ────────────────────────────────────────────────────────────────────
 enum OnboardingStatus {
-  PENDING     // Just signed up, hasn't finished onboarding
-  ACTIVE      // Fully onboarded and live
-  PAUSED      // Temporarily disabled
-  CANCELLED   // Cancelled their account
+  PENDING
+  ACTIVE
+  PAUSED
+  CANCELLED
 }
 
 enum Plan {
