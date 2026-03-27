@@ -1,0 +1,173 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ACCOUNT — one per SMB customer (tenant)
+// ─────────────────────────────────────────────
+model Account {
+  id              String   @id @default(uuid())
+  name            String
+  businessType    String
+  autoReply       Boolean  @default(false)
+  aiEnabled       Boolean  @default(false)
+  metaPageId      String?  @unique
+  metaAccessToken String?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  users        User[]
+  phoneNumbers PhoneNumber[]
+  leads        Lead[]
+
+  @@map("accounts")
+}
+
+// ─────────────────────────────────────────────
+// USER — owner/member of an account
+// ─────────────────────────────────────────────
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(OWNER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("users")
+}
+
+enum UserRole {
+  OWNER
+  MEMBER
+}
+
+// ─────────────────────────────────────────────
+// PHONE NUMBER — Twilio toll-free, one per account
+// ─────────────────────────────────────────────
+model PhoneNumber {
+  id        String   @id @default(uuid())
+  number    String   @unique
+  sid       String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("phone_numbers")
+}
+
+// ─────────────────────────────────────────────
+// LEAD — one per person who inquires
+// ─────────────────────────────────────────────
+model Lead {
+  id         String     @id @default(uuid())
+  name       String
+  phone      String
+  email      String?
+  service    String?
+  source     LeadSource
+  status     LeadStatus @default(NEW)
+  notes      String?
+  metaLeadId String?    @unique
+  metaPsid   String?    @unique
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  messages  Message[]
+  followUps FollowUp[]
+
+  @@index([accountId])
+  @@index([phone])
+  @@index([metaPsid])
+  @@map("leads")
+}
+
+enum LeadSource {
+  FB_FORM
+  FB_DM
+  IG_DM
+  SMS
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  REPLIED
+  QUALIFIED
+  BOOKED
+  CLOSED
+}
+
+// ─────────────────────────────────────────────
+// MESSAGE — every SMS sent or received
+// ─────────────────────────────────────────────
+model Message {
+  id           String           @id @default(uuid())
+  body         String
+  direction    MessageDirection
+  channel      MessageChannel   @default(SMS)
+  twilioSid    String?
+  aiSuggestion String?
+  sentAt       DateTime         @default(now())
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("messages")
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageChannel {
+  SMS
+  FB_MESSENGER
+  IG_DM
+}
+
+// ─────────────────────────────────────────────
+// FOLLOW-UP — scheduled BullMQ jobs
+// ─────────────────────────────────────────────
+model FollowUp {
+  id          String         @id @default(uuid())
+  body        String
+  scheduledAt DateTime
+  status      FollowUpStatus @default(PENDING)
+  jobId       String?
+  sentAt      DateTime?
+  createdAt   DateTime       @default(now())
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([scheduledAt])
+  @@map("follow_ups")
+}
+
+enum FollowUpStatus {
+  PENDING
+  SENT
+  CANCELLED
+  FAILED
+}
