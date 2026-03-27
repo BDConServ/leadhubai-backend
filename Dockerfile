@@ -1,27 +1,30 @@
 # LeadHub AI Backend v2
-# rebuild: 1
+# rebuild: 2
+
 FROM node:20-slim
 
 WORKDIR /app
 
-# Copy package files first (better caching)
+# Install dependencies
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install ALL dependencies including dev (needed for build)
 RUN npm ci --include=dev
 
-# Copy all source code
+# Copy source code
 COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build the app - exit loudly if it fails
+# Build and show output for debugging
 RUN npm run build || (echo "BUILD FAILED" && exit 1)
 
-# Verify dist/main.js was actually created
-RUN ls -la dist/ && test -f dist/main.js || (echo "dist/main.js MISSING" && exit 1)
+# Show what was built so we can debug if needed
+RUN echo "=== dist/ contents ===" && ls -la dist/ || echo "dist/ folder missing"
+
+# Check for main.js specifically
+RUN test -f dist/main.js || (echo "dist/main.js MISSING - check tsconfig outDir" && exit 1)
 
 EXPOSE 3000
 
