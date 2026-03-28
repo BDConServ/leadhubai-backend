@@ -21,5 +21,6 @@ RUN npm run build
 
 EXPOSE 3000
 
-# Run DB migrations then start the server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+# Skip migrate deploy — tables already exist in Supabase
+# Just start the server directly
+CMD ["node", "dist/main.js"]
